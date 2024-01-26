@@ -8,18 +8,20 @@ typedef enum {
     BF_DECREMENT,
     BF_MOVE_RIGHT,
     BF_MOVE_LEFT,
+    BF_START_LOOP, 
+    BF_END_LOOP,
+    BF_PRINT,
+    BF_INPUT,
 } cmd_type;
 
 typedef struct Node {
     cmd_type type;
     struct Node *next;
-    struct Node *child;
 } Node;
 
 
 Node* create_node(cmd_type type) {
     Node *node = malloc(sizeof(Node));
-    node->child = NULL;
     node->next = NULL;
     node->type = type;
     
@@ -28,7 +30,7 @@ Node* create_node(cmd_type type) {
 
 
 int main() {
-    FILE* source = fopen("source.bf", "r");
+    FILE* source = fopen("source.b", "r");
 
     size_t size = 0;
     char *buffer = NULL;
@@ -72,7 +74,18 @@ int main() {
             case '<':
                 node = create_node(BF_MOVE_LEFT);
                 break;
-            
+            case '[':
+                node = create_node(BF_START_LOOP);
+                break;
+            case ']':
+                node = create_node(BF_END_LOOP);
+                break;
+            case '.':
+                node = create_node(BF_PRINT);
+                break;
+            case ',':
+                node = create_node(BF_INPUT);
+                break;
             default:
                 printf("Unknown command in the source code\n");
                 break;
@@ -91,15 +104,18 @@ int main() {
 
     int memory[1024] = {0};
     int *ptr = memory;
+    Node* start_loop_ptr = NULL;
+    Node *loop_stack[1024];
+    int stack_top = 0;
 
-    for (Node* i = head; i != NULL; i = i->next) {
-        printf("Processing node of type: %d\n", i->type);
+    Node* i = head;
+    while (i != NULL) {
         switch (i->type) {
             case BF_INCREMENT:
                 (*ptr)++;
                 break;
             case BF_DECREMENT:
-                (*ptr)--;
+                if (*ptr != 0) (*ptr)--;
                 break;
             case BF_MOVE_LEFT:
                 ptr--;
@@ -107,9 +123,26 @@ int main() {
             case BF_MOVE_RIGHT:
                 ptr++;
                 break;
-            default:
+            case BF_PRINT:
+                printf("%c", *ptr);
                 break;
+            case BF_INPUT:
+                scanf("%c", ptr);
+                break;
+            case BF_START_LOOP:
+                loop_stack[stack_top++] = i;
+                break;
+            case BF_END_LOOP:
+                if (*ptr > 0) {
+                    i = loop_stack[stack_top - 1]; 
+                } else {
+                    stack_top--;  
+                    i = i->next;
+                }
+                continue;
         }
+
+        i = i->next; 
     }
 
     printf("Memory: ");
